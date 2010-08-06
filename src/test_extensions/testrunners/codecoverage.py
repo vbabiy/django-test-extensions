@@ -1,5 +1,5 @@
 import coverage
-import os, sys
+import os, sys, re
 from inspect import getmembers, ismodule
 
 from django.conf import settings
@@ -16,17 +16,11 @@ def is_wanted_module(mod):
     marked_to_include = None 
 
     for exclude in excluded:
-        if exclude.endswith("*"):
-            if mod.__name__.startswith(exclude[:-1]):
-                marked_to_include = False
-        elif mod.__name__ == exclude:
+        if re.match(exclude, mod.__name__):
             marked_to_include = False
     
     for include in included:
-        if include.endswith("*"):
-            if mod.__name__.startswith(include[:-1]):
-                marked_to_include = True
-        elif mod.__name__ == include:
+        if re.match(include, mod.__name__):
             marked_to_include = True
     
     # marked_to_include=None handles not user-defined states
@@ -78,6 +72,8 @@ def get_all_coverage_modules(app_module):
                 if file.lower().endswith('.py'):
                     mod_name = file[:-3].lower()
                     try:
+                        # FIXME: Breaks with paypal.pro
+                        mod_name = mod_name.replace(".", "")
                         mod = __import__('.'.join(root_path + [mod_name]),
                             {}, {}, mod_name)
                     except ImportError:
@@ -88,7 +84,7 @@ def get_all_coverage_modules(app_module):
     return mod_list
 
 def run_tests(test_labels, verbosity=1, interactive=True,
-        extra_tests=[], nodatabase=False, xml_out=False, callgraph=False):
+        extra_tests=[], nodatabase=False, xml_out=False, callgraph=False, failfast=False):
     """
     Test runner which displays a code coverage report at the end of the
     run.
@@ -149,7 +145,7 @@ def run_tests(test_labels, verbosity=1, interactive=True,
             extra_tests)
     else:
         results = django_test_runner(test_labels, verbosity, interactive,
-            extra_tests)
+            extra_tests, failfast)
     
     if callgraph and pycallgraph_enabled:
         pycallgraph.stop_trace()
