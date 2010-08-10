@@ -25,20 +25,6 @@ class Common(TestCase):
     # a list of fixtures for loading data before each test
     fixtures = []
 
-    def setUp(self):
-        """
-        setUp is run before each test in the class. Use it for
-        initilisation and creating mock objects to test
-        """
-        pass
-
-    def tearDown(self):
-        """
-        tearDown is run after each test in the class. Use it for
-        cleaning up data created during each test
-        """
-        pass
-
     # A few useful helpers methods
 
     def execute_sql(*sql):
@@ -48,6 +34,13 @@ class Common(TestCase):
         return cursor
 
     # Custom assertions
+    def assert_true(self, *args, **kwargs):
+        'Assert that two values are equal'
+        return self.assertTrue(*args, **kwargs)
+
+    def assert_false(self, *args, **kwargs):
+        'Assert that two values are equal'
+        return self.assertFalse(*args, **kwargs)
 
     def assert_equal(self, *args, **kwargs):
         'Assert that two values are equal'
@@ -57,6 +50,9 @@ class Common(TestCase):
     def assert_not_equal(self, *args, **kwargs):
         "Assert that two values are not equal"
         return not self.assertNotEqual(*args, **kwargs)
+    
+    def assert_key_in_context(self, key, response):
+        self.assert_key_exists(key, response.context)
 
     def assert_contains(self, needle, haystack, diagnostic=''):
         'Assert that one value (the hasystack) contains another value (the needle)'
@@ -106,6 +102,9 @@ class Common(TestCase):
     def assert_raises(self, *args, **kwargs):
         "Assert than a given function and arguments raises a given exception"
         return self.assertRaises(*args, **kwargs)
+    
+    def assert_template_used(self, *args, **kwargs):
+        return self.assertTemplateUsed(*args, **kwargs)
 
     def assert_attrs(self, obj, **kwargs):
         "Assert a given object has a given set of attribute values"
@@ -114,13 +113,12 @@ class Common(TestCase):
             actual = getattr(obj, key)
             self.assert_equal(expected, actual, u"Object's %s expected to be `%s', is `%s' instead" % (key, expected, actual))
 
-    def assert_key_exists(self, key, item):
+    def assert_key_exists(self, key, items, msg=""):
         "Assert than a given key exists in a given item"
         try:
-            self.assertTrue(key in item)
-        except AssertionError:
-            print 'no %s in %s' % (key, item)
-            raise AssertionError
+            items[key]
+        except KeyError:
+            raise AssertionError(msg)
 
     def assert_file_exists(self, file_path):
         "Assert a given file exists"

@@ -4,6 +4,8 @@ import re
 
 # needed to login to the admin
 from django.contrib.auth.models import User
+from django.core import mail
+from django.core.urlresolvers import reverse
 
 from django.template import Template, Context
 
@@ -14,24 +16,19 @@ class DjangoCommon(Common):
     class for you tests rather than django.test.TestCase
     """
 
-    # a list of fixtures for loading data before each test
-    fixtures = []
-
-    def setUp(self):
-        """
-        setUp is run before each test in the class. Use it for
-        initilisation and creating mock objects to test
-        """
-        pass
-
-    def tearDown(self):
-        """
-        tearDown is run after each test in the class. Use it for
-        cleaning up data created during each test
-        """
-        pass
-
     # A few useful helpers methods
+
+    
+    def get(self, name, *args, **kwargs):
+        get_data = kwargs.pop('get_data', {})
+        return self.client.get(reverse(name, args=args, kwargs=kwargs), data=get_data)
+
+    def post(self, name, *args, **kwargs):
+        post_data = kwargs.pop('post_data', {})
+        return self.client.post(reverse(name, args=args, kwargs=kwargs), data=post_data)
+    
+    def login(self, username, password):
+        self.assertTrue(self.client.login(username=username, password=password), "User failed login for %s:%s" % (username, password))
 
     def login_as_admin(self):
         "Create, then login as, an admin user"
@@ -47,6 +44,7 @@ class DjangoCommon(Common):
         if not self.client.login(username='admin', password='password'):
             raise Exception("Login failed")
 
+
     # Some assertions need to know which template tag libraries to load
     # so we provide a list of templatetag libraries
     template_tag_libraries = []
@@ -57,6 +55,9 @@ class DjangoCommon(Common):
         return Template(template).render(Context(kwargs)).strip()
 
     # Custom assertions
+    
+    def assert_redirects(self, *args, **kwargs):
+        return self.assertRedirects(*args, **kwargs)
 
     def assert_response_contains(self, fragment, response):
         "Assert that a response object contains a given string"
@@ -121,13 +122,16 @@ class DjangoCommon(Common):
         returns either a single mail object or a list of more than one
         '''
 
-        from django.core import mail
         previous_mails = len(mail.outbox)
         funk()
         mails = mail.outbox[ previous_mails : ]
         assert [] != mails, 'the called block produced no mails'
         if len(mails) == 1:  return mails[0]
         return mails
+    
+    def assert_last_mail_sent_to(self, *to, **kwargs):
+        msg = mail.outbox[-1]
+        self.assert_equal(msg.to, list(to), **kwargs)
 
     def assert_latest(self, query_set, lamb):
         pks = list(query_set.values_list('pk', flat=True).order_by('-pk'))
