@@ -51,9 +51,6 @@ class Common(TestCase):
         "Assert that two values are not equal"
         return not self.assertNotEqual(*args, **kwargs)
     
-    def assert_key_in_context(self, key, response):
-        self.assert_key_exists(key, response.context)
-
     def assert_contains(self, needle, haystack, diagnostic=''):
         'Assert that one value (the hasystack) contains another value (the needle)'
         diagnostic = diagnostic + "\nContent should contain `%s' but doesn't:\n%s" % (needle, haystack)

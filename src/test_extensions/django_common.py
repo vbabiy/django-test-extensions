@@ -3,7 +3,9 @@ from common import Common
 import re
 
 # needed to login to the admin
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.db.models.query import QuerySet
 from django.core import mail
 from django.core.urlresolvers import reverse
 
@@ -43,6 +45,12 @@ class DjangoCommon(Common):
 
         if not self.client.login(username='admin', password='password'):
             raise Exception("Login failed")
+    
+    def get_from_context(self, res, key):
+        try:
+            return res.context[key]
+        except KeyError:
+            raise AssertionError("%s is not in context" % str(key))
 
 
     # Some assertions need to know which template tag libraries to load
@@ -55,10 +63,26 @@ class DjangoCommon(Common):
         return Template(template).render(Context(kwargs)).strip()
 
     # Custom assertions
+    def assert_equal(self, *args, **kwargs):
+        """
+        Convert QuerySets to list.
+        """
+        args = list(args)
+        for index, arg in enumerate(args):
+            if isinstance(arg, QuerySet):
+                args[index] = list(arg)
+        
+        self.assertEqual(*args, **kwargs)
+    
+    def assert_key_in_context(self, key, response):
+        self.assert_key_exists(key, response.context)
+    
+    def assert_redirects_to_login(self, response):
+        self.assert_redirects(response, "%s?%s=%s" % (settings.LOGIN_URL, "next", response.request['PATH_INFO']))
     
     def assert_redirects(self, *args, **kwargs):
         return self.assertRedirects(*args, **kwargs)
-
+    
     def assert_response_contains(self, fragment, response):
         "Assert that a response object contains a given string"
         self.assert_(fragment in response.content, "Response should contain `%s' but doesn't:\n%s" % (fragment, response.content))
